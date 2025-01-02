@@ -59,7 +59,10 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// News scraping endpoint
+const getImageUrl = (imgElement, $) => {
+  return $(imgElement).attr('data-src') || $(imgElement).attr('src') || null;
+};
+
 app.get('/api/news', async (req, res, next) => {
   try {
     const { data } = await axios.get('https://odia.krishijagran.com', {
@@ -84,14 +87,14 @@ app.get('/api/news', async (req, res, next) => {
     if (topStory.length) {
       const topStoryTitle = topStory.find('a').attr('title');
       const topStoryLink = topStory.find('a').attr('href');
-      const topStoryImage = topStory.find('img').attr('src');
+      const topStoryImage = getImageUrl(topStory.find('img'), $);
       
       if (topStoryTitle && topStoryLink) {
         news.push({ 
           section: 'top_story',
           title: topStoryTitle, 
           link: `https://odia.krishijagran.com${topStoryLink}`, 
-          image: topStoryImage || null
+          image: topStoryImage
         });
       }
     }
@@ -100,14 +103,14 @@ app.get('/api/news', async (req, res, next) => {
     $('.row.h-t-20 .home-top-news-lst-lft .news-item').each((index, element) => {
       const title = $(element).find('a').attr('title');
       const link = $(element).find('a').attr('href');
-      const image = $(element).find('img').attr('src');
+      const image = getImageUrl($(element).find('img'), $);
       
       if (title && link) {
         news.push({ 
           section: 'left_list',
           title, 
           link: `https://odia.krishijagran.com${link}`, 
-          image: image || null
+          image
         });
       }
     });
@@ -116,14 +119,14 @@ app.get('/api/news', async (req, res, next) => {
     $('.row.h-t-20 .home-top-news-lst-rt .news-item').each((index, element) => {
       const title = $(element).find('a').attr('title');
       const link = $(element).find('a').attr('href');
-      const image = $(element).find('img').attr('src');
+      const image = getImageUrl($(element).find('img'), $);
       
       if (title && link) {
         news.push({ 
           section: 'right_list',
           title, 
           link: `https://odia.krishijagran.com${link}`, 
-          image: image || null
+          image
         });
       }
     });
@@ -132,14 +135,14 @@ app.get('/api/news', async (req, res, next) => {
     $('.weather-home .h-item').each((index, element) => {
       const title = $(element).find('h2 a').attr('title');
       const link = $(element).find('h2 a').attr('href');
-      const image = $(element).find('.img a img').attr('src');
+      const image = getImageUrl($(element).find('.img a img'), $);
       
       if (title && link) {
         news.push({ 
           section: 'animal_husbandry',
           title, 
           link: `https://odia.krishijagran.com${link}`, 
-          image: image || null
+          image
         });
       }
     });
@@ -149,7 +152,7 @@ app.get('/api/news', async (req, res, next) => {
       const title = $(element).find('a').text();
       const link = $(element).find('a').attr('href');
       const readMoreLink = $(element).find('.btn-link').attr('href');
-      const image = $(element).find('.img img').attr('src');
+      const image = getImageUrl($(element).find('.img img'), $);
       
       if (title && link) {
         news.push({ 
@@ -157,7 +160,7 @@ app.get('/api/news', async (req, res, next) => {
           title, 
           link: `https://odia.krishijagran.com${link}`, 
           readMoreLink: readMoreLink ? `https://odia.krishijagran.com${readMoreLink}` : null,
-          image: image || null
+          image
         });
       }
     });
@@ -170,7 +173,7 @@ app.get('/api/news', async (req, res, next) => {
         $(categoryElement).find('.list-unstyled li').each((i, article) => {
           const title = $(article).find('h2 a').attr('title');
           const link = $(article).find('h2 a').attr('href');
-          const image = $(article).find('img').attr('src');
+          const image = getImageUrl($(article).find('img'), $);
           
           if (title && link) {
             news.push({
@@ -178,44 +181,43 @@ app.get('/api/news', async (req, res, next) => {
               category: categoryName,
               title,
               link: `https://odia.krishijagran.com${link}`,
-              image: image || null
+              image
             });
           }
         });
       }
     });
 
-
-     // 7. Scrape trending articles
-     $('.trending-articles .list-unstyled li').each((index, element) => {
-        const title = $(element).find('a').attr('title');
-        const link = $(element).find('a').attr('href');
-        const image = $(element).find('img').attr('src');
-        
-        if (title && link) {
-            news.push({
-                section: 'trending',
-                title,
-                link: `https://odia.krishijagran.com${link}`,
-                image: image || null
-            });
-        }
+    // 7. Trending articles
+    $('.trending-articles .list-unstyled li').each((index, element) => {
+      const title = $(element).find('a').attr('title');
+      const link = $(element).find('a').attr('href');
+      const image = getImageUrl($(element).find('img'), $);
+      
+      if (title && link) {
+        news.push({
+          section: 'trending',
+          title,
+          link: `https://odia.krishijagran.com${link}`,
+          image
+        });
+      }
     });
 
-    // 8. Scrape latest news
+    // 8. Latest news
     $('.latest-news .list-unstyled li').each((index, element) => {
-        const title = $(element).find('a').attr('title');
-        const link = $(element).find('a').attr('href');
-        const image = $(element).find('img').attr('src');
-        
-        if (title && link) {
-            news.push({
-                section: 'latest_news',
-                title,
-                link: `https://odia.krishijagran.com${link}`,
-                image: image || null
-            });
-        }
+      const title = $(element).find('a').attr('title');
+      const link = $(element).find('a').attr('href');
+      const image = getImageUrl($(element).find('img'), $);
+      
+      if (title && link) {
+        news.push({
+          section: 'latest_news',
+          title,
+          link: `https://odia.krishijagran.com${link}`,
+          image
+        });
+      }
     });
 
     res.json({
