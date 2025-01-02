@@ -6,12 +6,24 @@ const cheerio = require('cheerio');
 const app = express();
 app.use(cors());
 
-const TIMEOUT = 30000; // 30 seconds
+// Base route for verification
+app.get('/', (req, res) => {
+    res.json({ status: 'Server is running' });
+});
 
-app.get('/news', async (req, res) => {
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString() 
+    });
+});
+
+// Main news scraping endpoint
+app.get('/api/news', async (req, res) => {
     try {
         const { data } = await axios.get('https://odia.krishijagran.com', {
-            timeout: TIMEOUT,
+            timeout: 30000,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -197,20 +209,13 @@ app.get('/news', async (req, res) => {
     }
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
-        timestamp: new Date().toISOString() 
-    });
-});
-
-// Export the app for Vercel
-module.exports = app;
-
+// For local testing
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`Server is running on http://localhost:${PORT}`);
     });
 }
+
+// Export for Vercel
+module.exports = app;
