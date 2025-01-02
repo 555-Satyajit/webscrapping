@@ -10,7 +10,7 @@ const app = express();
 
 // CORS Configuration
 const allowedOrigins = [
-  'https://agromitra.vercel.app',
+  'https://farm-smart-lbrl3y.flutterflow.app',
   'http://localhost:3000',
   process.env.FRONTEND_URL
 ].filter(Boolean);
@@ -65,6 +65,8 @@ const getImageUrl = (imgElement, $) => {
 
 app.get('/api/news', async (req, res, next) => {
   try {
+    console.log('Starting news fetch...');
+    
     const { data } = await axios.get('https://odia.krishijagran.com', {
       timeout: 30000,
       headers: {
@@ -75,105 +77,144 @@ app.get('/api/news', async (req, res, next) => {
       }
     });
 
-    if (!data || typeof data !== 'string') {
-      throw new Error('Invalid response data received');
-    }
-
     const $ = cheerio.load(data);
     const news = [];
+    const diagnostics = {
+      sectionCounts: {},
+      sectionDetails: {},
+      failedItems: []
+    };
+
+    function logSectionStart(sectionName, selector) {
+      console.log(`\n=== Processing ${sectionName} ===`);
+      console.log(`Selector: ${selector}`);
+      diagnostics.sectionCounts[sectionName] = 0;
+      diagnostics.sectionDetails[sectionName] = {
+        elementsFound: 0,
+        elementsParsed: 0,
+        failedItems: []
+      };
+    }
 
     // 1. Top story
+    logSectionStart('topStory', '.row.h-t-20 .top-story');
     const topStory = $('.row.h-t-20 .top-story');
+    diagnostics.sectionDetails.topStory.elementsFound = topStory.length;
+    
     if (topStory.length) {
-      const topStoryTitle = topStory.find('a').attr('title');
-      const topStoryLink = topStory.find('a').attr('href');
-      const topStoryImage = getImageUrl(topStory.find('img'), $);
+      const title = topStory.find('a').attr('title');
+      const link = topStory.find('a').attr('href');
+      console.log('Top Story found:', { title, link });
       
-      if (topStoryTitle && topStoryLink) {
+      if (title && link) {
         news.push({ 
           section: 'top_story',
-          title: topStoryTitle, 
-          link: `https://odia.krishijagran.com${topStoryLink}`, 
-          image: topStoryImage
+          title,
+          link: `https://odia.krishijagran.com${link}`,
+          image: getImageUrl(topStory.find('img'), $)
         });
+        diagnostics.sectionCounts.topStory++;
+        diagnostics.sectionDetails.topStory.elementsParsed++;
       }
     }
 
     // 2. Left list news items
-    $('.row.h-t-20 .home-top-news-lst-lft .news-item').each((index, element) => {
+    logSectionStart('leftList', '.row.h-t-20 .home-top-news-lst-lft .news-item');
+    const leftListItems = $('.row.h-t-20 .home-top-news-lst-lft .news-item');
+    diagnostics.sectionDetails.leftList.elementsFound = leftListItems.length;
+    
+    leftListItems.each((index, element) => {
       const title = $(element).find('a').attr('title');
       const link = $(element).find('a').attr('href');
-      const image = getImageUrl($(element).find('img'), $);
       
       if (title && link) {
         news.push({ 
           section: 'left_list',
-          title, 
-          link: `https://odia.krishijagran.com${link}`, 
-          image
+          title,
+          link: `https://odia.krishijagran.com${link}`,
+          image: getImageUrl($(element).find('img'), $)
         });
+        diagnostics.sectionCounts.leftList++;
+        diagnostics.sectionDetails.leftList.elementsParsed++;
       }
     });
 
     // 3. Right list news items
-    $('.row.h-t-20 .home-top-news-lst-rt .news-item').each((index, element) => {
+    logSectionStart('rightList', '.row.h-t-20 .home-top-news-lst-rt .news-item');
+    const rightListItems = $('.row.h-t-20 .home-top-news-lst-rt .news-item');
+    diagnostics.sectionDetails.rightList.elementsFound = rightListItems.length;
+    
+    rightListItems.each((index, element) => {
       const title = $(element).find('a').attr('title');
       const link = $(element).find('a').attr('href');
-      const image = getImageUrl($(element).find('img'), $);
       
       if (title && link) {
         news.push({ 
           section: 'right_list',
-          title, 
-          link: `https://odia.krishijagran.com${link}`, 
-          image
+          title,
+          link: `https://odia.krishijagran.com${link}`,
+          image: getImageUrl($(element).find('img'), $)
         });
+        diagnostics.sectionCounts.rightList++;
+        diagnostics.sectionDetails.rightList.elementsParsed++;
       }
     });
 
     // 4. Animal husbandry section
-    $('.weather-home .h-item').each((index, element) => {
+    logSectionStart('animalHusbandry', '.weather-home .h-item');
+    const animalHusbandryItems = $('.weather-home .h-item');
+    diagnostics.sectionDetails.animalHusbandry.elementsFound = animalHusbandryItems.length;
+    
+    animalHusbandryItems.each((index, element) => {
       const title = $(element).find('h2 a').attr('title');
       const link = $(element).find('h2 a').attr('href');
-      const image = getImageUrl($(element).find('.img a img'), $);
       
       if (title && link) {
         news.push({ 
           section: 'animal_husbandry',
-          title, 
-          link: `https://odia.krishijagran.com${link}`, 
-          image
+          title,
+          link: `https://odia.krishijagran.com${link}`,
+          image: getImageUrl($(element).find('.img a img'), $)
         });
+        diagnostics.sectionCounts.animalHusbandry = (diagnostics.sectionCounts.animalHusbandry || 0) + 1;
+        diagnostics.sectionDetails.animalHusbandry.elementsParsed++;
       }
     });
 
     // 5. Health and lifestyle section
-    $('.weather-home .h-title').each((index, element) => {
+    logSectionStart('healthLifestyle', '.weather-home .h-title');
+    const healthItems = $('.weather-home .h-title');
+    diagnostics.sectionDetails.healthLifestyle.elementsFound = healthItems.length;
+    
+    healthItems.each((index, element) => {
       const title = $(element).find('a').text();
       const link = $(element).find('a').attr('href');
-      const readMoreLink = $(element).find('.btn-link').attr('href');
-      const image = getImageUrl($(element).find('.img img'), $);
       
       if (title && link) {
         news.push({ 
           section: 'health_lifestyle',
-          title, 
-          link: `https://odia.krishijagran.com${link}`, 
-          readMoreLink: readMoreLink ? `https://odia.krishijagran.com${readMoreLink}` : null,
-          image
+          title,
+          link: `https://odia.krishijagran.com${link}`,
+          readMoreLink: $(element).find('.btn-link').attr('href'),
+          image: getImageUrl($(element).find('.img img'), $)
         });
+        diagnostics.sectionCounts.healthLifestyle = (diagnostics.sectionCounts.healthLifestyle || 0) + 1;
+        diagnostics.sectionDetails.healthLifestyle.elementsParsed++;
       }
     });
 
     // 6. Categories
-    $('.home-cat .cat-flex').each((index, categoryElement) => {
+    logSectionStart('categories', '.home-cat .cat-flex');
+    const categoryElements = $('.home-cat .cat-flex');
+    diagnostics.sectionDetails.categories.elementsFound = categoryElements.length;
+    
+    categoryElements.each((index, categoryElement) => {
       const categoryName = $(categoryElement).find('.cat-h a').attr('title');
       
       if (categoryName) {
         $(categoryElement).find('.list-unstyled li').each((i, article) => {
           const title = $(article).find('h2 a').attr('title');
           const link = $(article).find('h2 a').attr('href');
-          const image = getImageUrl($(article).find('img'), $);
           
           if (title && link) {
             news.push({
@@ -181,48 +222,37 @@ app.get('/api/news', async (req, res, next) => {
               category: categoryName,
               title,
               link: `https://odia.krishijagran.com${link}`,
-              image
+              image: getImageUrl($(article).find('img'), $)
             });
+            diagnostics.sectionCounts.categories = (diagnostics.sectionCounts.categories || 0) + 1;
+            diagnostics.sectionDetails.categories.elementsParsed++;
           }
         });
       }
     });
 
-    // 7. Trending articles
-    $('.trending-articles .list-unstyled li').each((index, element) => {
-      const title = $(element).find('a').attr('title');
-      const link = $(element).find('a').attr('href');
-      const image = getImageUrl($(element).find('img'), $);
-      
-      if (title && link) {
-        news.push({
-          section: 'trending',
-          title,
-          link: `https://odia.krishijagran.com${link}`,
-          image
-        });
+    // Log HTML structure for debugging
+    console.log('\n=== HTML Structure Analysis ===');
+    const structureAnalysis = {
+      weatherHome: {
+        exists: $('.weather-home').length > 0,
+        hItems: $('.weather-home .h-item').length,
+        hTitles: $('.weather-home .h-title').length
+      },
+      homeCat: {
+        exists: $('.home-cat').length > 0,
+        catFlex: $('.home-cat .cat-flex').length,
+        articles: $('.home-cat .cat-flex .list-unstyled li').length
       }
-    });
+    };
+    console.log('Structure Analysis:', structureAnalysis);
 
-    // 8. Latest news
-    $('.latest-news .list-unstyled li').each((index, element) => {
-      const title = $(element).find('a').attr('title');
-      const link = $(element).find('a').attr('href');
-      const image = getImageUrl($(element).find('img'), $);
-      
-      if (title && link) {
-        news.push({
-          section: 'latest_news',
-          title,
-          link: `https://odia.krishijagran.com${link}`,
-          image
-        });
-      }
-    });
-
+    // Final response
     res.json({
       status: 'success',
       count: news.length,
+      diagnostics,
+      structureAnalysis,
       data: news
     });
 
@@ -231,7 +261,8 @@ app.get('/api/news', async (req, res, next) => {
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch news data',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
