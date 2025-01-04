@@ -10,6 +10,7 @@ const app = express();
 
 // CORS Configuration
 const allowedOrigins = [
+  'https://agromitra.vercel.app',
   'https://farm-smart-lbrl3y.flutterflow.app',
   'http://localhost:3000',
   process.env.FRONTEND_URL
